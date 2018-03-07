@@ -3,13 +3,13 @@ use std::thread;
 use std::net::UdpSocket;
 
 fn main() {
-    let multicast_address = "239.255.255.250:1982";
+    const MULTICAST_ADDR: &'static str = "239.255.255.250:1982";
     let socket = match UdpSocket::bind("0.0.0.0:34254") {
         Ok(s) => s,
         Err(e) => panic!("couldn't bind socket: {}", e)
     };
 
-    send_search_broadcast(&socket, &multicast_address);
+    send_search_broadcast(&socket, &MULTICAST_ADDR);
 
     let mut buf = [0; 2048];
     loop {
