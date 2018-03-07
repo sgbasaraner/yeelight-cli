@@ -32,12 +32,16 @@ fn detect_bulbs(socket: &UdpSocket) {
                 thread::spawn(move || {
                     println!("amt: {}", amt);
                     println!("src: {}", src);
-                    println!("{}", str::from_utf8(&buf).unwrap_or(""));
                 });
+                process_search_response(str::from_utf8(&buf).unwrap_or(""))
             },
             Err(e) => {
                 println!("couldn't receive a datagram: {}", e);
             }
         }
     }
+}
+
+fn process_search_response(response: &str) {
+    println!("{}", response);
 }
