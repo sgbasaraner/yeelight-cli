@@ -2,14 +2,15 @@ use std::str;
 use std::thread;
 use std::net::UdpSocket;
 
+const MULTICAST_ADDR: &'static str = "239.255.255.250:1982";
+
 fn main() {
-    const MULTICAST_ADDR: &'static str = "239.255.255.250:1982";
     let socket = match UdpSocket::bind("0.0.0.0:34254") {
         Ok(s) => s,
         Err(e) => panic!("couldn't bind socket: {}", e)
     };
 
-    send_search_broadcast(&socket, &MULTICAST_ADDR);
+    send_search_broadcast(&socket);
 
     let mut buf = [0; 2048];
     loop {
@@ -28,12 +29,12 @@ fn main() {
     }
 }
 
-fn send_search_broadcast(socket: &UdpSocket, address: &str) {
+fn send_search_broadcast(socket: &UdpSocket) {
     let message = 
                     "M-SEARCH * HTTP/1.1\r\n
                     HOST: 239.255.255.250:1982\r\n
                     MAN: \"ssdp:discover\"\r\n
                     ST: wifi_bulb".as_bytes();
 
-    socket.send_to(message, address).expect("couldn't send to socket");
+    socket.send_to(message, MULTICAST_ADDR).expect("couldn't send to socket");
 }
