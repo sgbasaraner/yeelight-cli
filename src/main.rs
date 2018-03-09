@@ -73,7 +73,8 @@ fn process_search_response(response: &str) -> Bulb {
         rgb: parse_rgb(values[8].parse::<u32>().unwrap()),
         hue: values[9].parse::<u16>().unwrap(),
         sat: values[10].parse::<u8>().unwrap(),
-        name: values[11].clone()
+        name: values[11].clone(),
+        ip: get_ip(response).unwrap()
     }
 }
 
@@ -82,6 +83,17 @@ fn create_socket() -> UdpSocket {
         Ok(s) => { return s },
         Err(e) => panic!("couldn't bind socket: {}", e)
     };
+}
+
+fn get_ip(response: &str) -> Option<String> {
+    let split = response.split("\r\n");
+    for line in split {
+        if line.contains("Location") {
+            let vec = line.split("//").collect::<Vec<&str>>();
+            return Some(String::from(vec[1]));
+        }
+    }
+    return None;
 }
 
 fn get_param_value(response: &str, param: &str) -> Option<String> {

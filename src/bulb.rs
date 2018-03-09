@@ -11,7 +11,8 @@ pub struct Bulb {
     pub rgb: RGB,
     pub hue: u16,
     pub sat: u8,
-    pub name: String
+    pub name: String,
+    pub ip: String
 }
 
 #[derive(Debug, Clone, Copy)]
