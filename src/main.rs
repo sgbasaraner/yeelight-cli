@@ -29,9 +29,9 @@ fn detect_bulbs(socket: &UdpSocket) {
     loop {
         match socket.recv_from(&mut buf) {
             Ok((amt, src)) => {
-                    println!("amt: {}", amt);
-                    println!("src: {}", src);
-                    process_search_response(str::from_utf8(&buf).unwrap_or(""));
+                println!("amt: {}", amt);
+                println!("src: {}", src);
+                process_search_response(str::from_utf8(&buf).unwrap_or(""));
             },
             Err(e) => {
                 println!("Couldn't receive a datagram: {}", e);
