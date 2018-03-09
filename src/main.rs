@@ -2,9 +2,10 @@ mod bulb;
 
 use std::str;
 use std::{thread, time};
-use std::net::UdpSocket;
+use std::net::{TcpStream, UdpSocket};
 use std::sync::mpsc::{Sender, Receiver, channel, TryRecvError};
 use bulb::{Bulb, RGB};
+use std::io::Write;
 
 const MULTICAST_ADDR: &'static str = "239.255.255.250:1982";
 
@@ -30,17 +31,20 @@ fn main() {
             thread::sleep(time::Duration::from_millis(200));
         }
     });
-    thread::sleep(time::Duration::from_secs(3));
+    thread::sleep(time::Duration::from_secs(2));
     loop {
         match receiver.try_recv() {
-            Ok(b) => {
-                bulbs.push(b);
-            },
+            Ok(b) => bulbs.push(b),
             Err(TryRecvError::Empty) | Err(TryRecvError::Disconnected) => break,
         }
     }
     bulbs = remove_duplicates(bulbs);
     println!("{:?}", bulbs);
+    let mut current_command_id: u32 = 0;
+    for i in 0..10 {
+        operate_on_bulb(&mut current_command_id, &bulbs[0], "set_bright", &(i * 10).to_string()[..]);
+        thread::sleep(time::Duration::from_secs(1));
+    }
 }
 
 fn send_search_broadcast(socket: &UdpSocket) {
@@ -124,4 +128,26 @@ fn remove_duplicates(bulbs: Vec<Bulb>) -> Vec<Bulb> {
         new.push(bulb);
     }
     new
+}
+
+fn get_next_cmd(cur: &mut u32) -> &u32 {
+    *cur += 1;
+    cur
+}
+
+fn operate_on_bulb(cur: &mut u32, bulb: &Bulb, method: &str, params: &str) {
+    let ip = &bulb.ip.to_owned()[..];
+    let mut stream = TcpStream::connect(ip).expect("Couldn't start the stream.");
+    let mut message = String::new();
+    message.push_str("{\"id\":");
+    message.push_str(&get_next_cmd(cur).to_string()[..]);
+    message.push_str(",\"method\":\"");
+    message.push_str(method);
+    message.push_str("\",\"params\":[");
+    message.push_str(params);
+    message.push_str("]}\r\n");
+    println!("{}", message);
+    let ip = &bulb.ip.to_owned()[..];
+    println!("{}", ip);
+    stream.write(message.as_bytes()).expect("Couldn't send to the stream");
 }
