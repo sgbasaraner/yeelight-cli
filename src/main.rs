@@ -1,3 +1,5 @@
+mod bulb;
+
 use std::str;
 use std::{thread, time};
 use std::net::UdpSocket;
