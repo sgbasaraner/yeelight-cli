@@ -3,6 +3,7 @@ mod bulb;
 use std::str;
 use std::{thread, time};
 use std::net::UdpSocket;
+use std::sync::mpsc::{Sender, Receiver, channel, TryRecvError};
 use bulb::{Bulb, RGB};
 
 const MULTICAST_ADDR: &'static str = "239.255.255.250:1982";
@@ -10,8 +11,36 @@ const MULTICAST_ADDR: &'static str = "239.255.255.250:1982";
 fn main() {
     let socket = create_socket();
     send_search_broadcast(&socket);
-    thread::spawn(move || {detect_bulbs(&socket); });
-    thread::sleep(time::Duration::from_secs(2));
+    let mut bulbs: Vec<Bulb> = Vec::new();
+    let (sender, receiver): (Sender<Bulb>, Receiver<Bulb>) = channel();
+    thread::spawn(move || {
+        let mut buf = [0; 2048];
+        loop {
+            match socket.recv_from(&mut buf) {
+                Ok((amt, src)) => {
+                    println!("amt: {}", amt);
+                    println!("src: {}", src);
+                    let _ = sender.send(process_search_response(str::from_utf8(&buf).unwrap()));
+                },
+                Err(e) => {
+                    println!("Couldn't receive a datagram: {}", e);
+                    break;
+                }
+            }
+            thread::sleep(time::Duration::from_millis(200));
+        }
+    });
+    thread::sleep(time::Duration::from_secs(3));
+    loop {
+        match receiver.try_recv() {
+            Ok(b) => {
+                bulbs.push(b);
+            },
+            Err(TryRecvError::Empty) | Err(TryRecvError::Disconnected) => break,
+        }
+    }
+    bulbs = remove_duplicates(bulbs);
+    println!("{:?}", bulbs);
 }
 
 fn send_search_broadcast(socket: &UdpSocket) {
@@ -24,33 +53,15 @@ fn send_search_broadcast(socket: &UdpSocket) {
     socket.send_to(message, MULTICAST_ADDR).expect("couldn't send to socket");
 }
 
-fn detect_bulbs(socket: &UdpSocket) {
-    let mut buf = [0; 2048];
-    loop {
-        match socket.recv_from(&mut buf) {
-            Ok((amt, src)) => {
-                println!("amt: {}", amt);
-                println!("src: {}", src);
-                process_search_response(str::from_utf8(&buf).unwrap_or(""));
-            },
-            Err(e) => {
-                println!("Couldn't receive a datagram: {}", e);
-                break;
-            }
-        }
-        thread::sleep(time::Duration::from_millis(200));
-    }
-}
-
-fn process_search_response(response: &str) {
+fn process_search_response(response: &str) -> Bulb {
     let params = ["id", "model", "fw_ver", "support", "power", "bright", "color_mode", "ct", "rgb", "hue", "sat", "name"];
     let mut values = Vec::new();
-    for param in params.iter() {
-        values.push(get_param_value(response, param).unwrap())
+    for i in 0..12 {
+        values.push(get_param_value(response, params[i]).unwrap());
     }
     let mut power = false;
     if values[4] == "on" { power = true; }
-    let bulb = Bulb {
+    Bulb {
         id: values[0].clone(),
         model: values[1].clone(),
         fw_ver: values[2].parse::<u16>().unwrap(),
@@ -63,8 +74,7 @@ fn process_search_response(response: &str) {
         hue: values[9].parse::<u16>().unwrap(),
         sat: values[10].parse::<u8>().unwrap(),
         name: values[11].clone()
-    };
-    
+    }
 }
 
 fn create_socket() -> UdpSocket {
@@ -93,11 +103,13 @@ fn parse_rgb(int: u32) -> RGB {
     }
 }
 
-fn check_uniqueness(bulbs: &Vec<Bulb>, id: &String) -> bool {
+fn remove_duplicates(bulbs: Vec<Bulb>) -> Vec<Bulb> {
+    let mut new = Vec::new();
+    let mut ids = Vec::new();
     for bulb in bulbs {
-        if bulb.id == *id {
-            return false;
-        }
+        if ids.contains(&bulb.id) { continue }
+        ids.push(bulb.id.clone());
+        new.push(bulb);
     }
-    true
+    new
 }

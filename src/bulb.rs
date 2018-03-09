@@ -1,3 +1,4 @@
+#[derive(Debug, Clone)]
 pub struct Bulb {
     pub id: String,
     pub model: String,
@@ -13,6 +14,7 @@ pub struct Bulb {
     pub name: String
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct RGB {
     pub r: u8,
     pub g: u8,
