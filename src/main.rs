@@ -93,9 +93,9 @@ fn parse_rgb(int: u32) -> RGB {
     }
 }
 
-fn check_uniqueness(bulbs: Vec<Bulb>, id: String) -> bool {
+fn check_uniqueness(bulbs: &Vec<Bulb>, id: &String) -> bool {
     for bulb in bulbs {
-        if bulb.id == id {
+        if bulb.id == *id {
             return false;
         }
     }
