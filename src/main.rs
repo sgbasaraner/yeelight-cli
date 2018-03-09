@@ -6,7 +6,9 @@ const MULTICAST_ADDR: &'static str = "239.255.255.250:1982";
 
 fn main() {
     let socket = create_socket();
-    detect_bulbs(&socket);
+    send_search_broadcast(&socket);
+    thread::spawn(move || {detect_bulbs(&socket); });
+    thread::sleep(time::Duration::from_secs(2));
 }
 
 fn send_search_broadcast(socket: &UdpSocket) {
@@ -21,41 +23,29 @@ fn send_search_broadcast(socket: &UdpSocket) {
 
 fn detect_bulbs(socket: &UdpSocket) {
     let mut buf = [0; 2048];
-    let mut time_elapsed: i32 = 0;
-    let search_interval: i32 = 300;
-    let read_interval: i32 = 1;
-
     loop {
-        if time_elapsed % search_interval == 0 {
-            send_search_broadcast(socket);
-        }
         match socket.recv_from(&mut buf) {
             Ok((amt, src)) => {
-                thread::spawn(move || {
                     println!("amt: {}", amt);
                     println!("src: {}", src);
-                });
-                process_search_response(str::from_utf8(&buf).unwrap_or(""));
-                let sleep_time = time::Duration::from_millis((read_interval as f32 / 10.0) as u64 * 1000);
-                thread::sleep(sleep_time);
+                    process_search_response(str::from_utf8(&buf).unwrap_or(""));
             },
             Err(e) => {
-                println!("couldn't receive a response: {}", e);
+                println!("Couldn't receive a datagram: {}", e);
                 break;
             }
         }
-        time_elapsed += read_interval;
-        println!("{}", time_elapsed);
+        thread::sleep(time::Duration::from_millis(200));
     }
 }
 
 fn process_search_response(response: &str) {
-    println!("{}", response);
+    println!("\n*\n{}\n*\n", response);
 }
 
 fn create_socket() -> UdpSocket {
     match UdpSocket::bind("0.0.0.0:34254") {
-        Ok(s) => return s,
+        Ok(s) => { return s },
         Err(e) => panic!("couldn't bind socket: {}", e)
     };
 }
