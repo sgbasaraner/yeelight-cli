@@ -42,7 +42,7 @@ fn detect_bulbs(socket: &UdpSocket) {
 }
 
 fn process_search_response(response: &str) {
-    println!("\n*\n{}\n*\n", response);
+    println!("{}", get_param_value(response, "ct").unwrap())
 }
 
 fn create_socket() -> UdpSocket {
@@ -50,4 +50,15 @@ fn create_socket() -> UdpSocket {
         Ok(s) => { return s },
         Err(e) => panic!("couldn't bind socket: {}", e)
     };
+}
+
+fn get_param_value(response: &str, value: &str) -> Option<String> {
+    let split = response.split("\r\n");
+    for line in split {
+        let vec = line.split(": ").collect::<Vec<&str>>();
+        if vec[0].contains(value) {
+            return Some(String::from(vec[1]));
+        }
+    }
+    return None;
 }
