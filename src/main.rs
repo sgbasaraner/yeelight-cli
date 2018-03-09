@@ -3,6 +3,7 @@ mod bulb;
 use std::str;
 use std::{thread, time};
 use std::net::UdpSocket;
+use bulb::{Bulb, RGB};
 
 const MULTICAST_ADDR: &'static str = "239.255.255.250:1982";
 
@@ -42,7 +43,28 @@ fn detect_bulbs(socket: &UdpSocket) {
 }
 
 fn process_search_response(response: &str) {
-    println!("{}", get_param_value(response, "ct").unwrap())
+    let params = ["id", "model", "fw_ver", "support", "power", "bright", "color_mode", "ct", "rgb", "hue", "sat", "name"];
+    let mut values = Vec::new();
+    for param in params.iter() {
+        values.push(get_param_value(response, param).unwrap())
+    }
+    let mut power = false;
+    if values[4] == "on" { power = true; }
+    let bulb = Bulb {
+        id: values[0].clone(),
+        model: values[1].clone(),
+        fw_ver: values[2].parse::<u16>().unwrap(),
+        support: values[3].clone(),
+        power: power,
+        bright: values[5].parse::<u8>().unwrap(),
+        color_mode: values[6].parse::<u8>().unwrap(),
+        ct: values[7].parse::<u16>().unwrap(),
+        rgb: parse_rgb(values[8].parse::<u32>().unwrap()),
+        hue: values[9].parse::<u16>().unwrap(),
+        sat: values[10].parse::<u8>().unwrap(),
+        name: values[11].clone()
+    };
+    
 }
 
 fn create_socket() -> UdpSocket {
@@ -52,13 +74,21 @@ fn create_socket() -> UdpSocket {
     };
 }
 
-fn get_param_value(response: &str, value: &str) -> Option<String> {
+fn get_param_value(response: &str, param: &str) -> Option<String> {
     let split = response.split("\r\n");
     for line in split {
         let vec = line.split(": ").collect::<Vec<&str>>();
-        if vec[0].contains(value) {
+        if vec[0].contains(param) {
             return Some(String::from(vec[1]));
         }
     }
     return None;
+}
+
+fn parse_rgb(int: u32) -> RGB {
+    RGB {
+        r: ((int >> 16) & 0xFF) as u8,
+        g: ((int >> 8) & 0xFF) as u8,
+        b: ((int >> 0) & 0xFF) as u8
+    }
 }
