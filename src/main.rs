@@ -22,7 +22,7 @@ fn main() {
         let mut buf = [0; 2048];
         loop {
             match socket.recv_from(&mut buf) {
-                Ok((amt, src)) => {
+                Ok(_) => {
                     let _ = sender.send(process_search_response(str::from_utf8(&buf).unwrap()));
                 },
                 Err(e) => {
@@ -43,11 +43,28 @@ fn main() {
     bulbs = remove_duplicates(bulbs);
     print_pretty_table(&bulbs);
     print_usage_instructions();
-    print!("Command: ");
-    let mut line = String::new();
-    let stdin = io::stdin();
-    stdin.lock().read_line(&mut line).expect("Couldn't process the command.");
-    println!("{}", line);
+    // Main program loop
+    loop {
+        print!("Command: ");
+        io::stdout().flush().unwrap();
+        let stdin = io::stdin();
+        let mut prompt = String::new();
+        stdin.lock().read_line(&mut prompt).expect("Couldn't process the command.");
+        if prompt.contains("quit") { break; }
+        let mut current_operation_id = 0;
+        let space_split = prompt.split(" ").collect::<Vec<&str>>();
+        let bulb_index: usize = space_split[0].parse::<usize>().unwrap() - 1;
+        let mut params = String::new();
+        let mut tmp = 0;
+        for arg in &space_split {
+            if tmp < 2 { 
+                tmp += 1;
+                continue; 
+            }
+            params.push_str(&arg);
+        }
+        operate_on_bulb(&mut current_operation_id, &bulbs[bulb_index], &space_split[1], &params);
+    }
 }
 
 fn print_pretty_table(bulbs: &Vec<Bulb>) {
@@ -62,10 +79,12 @@ fn print_pretty_table(bulbs: &Vec<Bulb>) {
 }
 
 fn print_usage_instructions() {
-    println!("To operate on bulbs, try prompting:
+    println!(
+        "To operate on bulbs, try prompting:
         bulb_id method param1 param2 param3 param4
         For example, you can try:
-        1 set_power \"on\" \"smooth\" 500");
+        1 set_power \"on\" \"smooth\" 500
+        You can quit by typing quit.");
 }
 
 fn send_search_broadcast(socket: &UdpSocket) {
@@ -168,7 +187,5 @@ fn operate_on_bulb(cur: &mut u32, bulb: &Bulb, method: &str, params: &str) {
     message.push_str(params);
     message.push_str("]}\r\n");
     println!("{}", message);
-    let ip = &bulb.ip.to_owned()[..];
-    println!("{}", ip);
     stream.write(message.as_bytes()).expect("Couldn't send to the stream");
 }
