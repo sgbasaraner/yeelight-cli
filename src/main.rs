@@ -1,5 +1,9 @@
 mod bulb;
 
+#[macro_use] extern crate prettytable;
+use prettytable::Table;
+use prettytable::row::Row;
+
 use std::str;
 use std::{thread, time};
 use std::net::{TcpStream, UdpSocket};
@@ -19,8 +23,6 @@ fn main() {
         loop {
             match socket.recv_from(&mut buf) {
                 Ok((amt, src)) => {
-                    println!("amt: {}", amt);
-                    println!("src: {}", src);
                     let _ = sender.send(process_search_response(str::from_utf8(&buf).unwrap()));
                 },
                 Err(e) => {
@@ -39,14 +41,14 @@ fn main() {
         }
     }
     bulbs = remove_duplicates(bulbs);
-    println!("{:?}", bulbs);
-    let mut current_command_id: u32 = 0;
-    operate_on_bulb(&mut current_command_id, &bulbs[0], "toggle", "");
-    for i in 0..10 {
-        operate_on_bulb(&mut current_command_id, &bulbs[0], "set_bright", &(i * 10).to_string()[..]);
-        //operate_on_bulb(&mut current_command_id, &bulbs[0], "toggle", "");
-        thread::sleep(time::Duration::from_secs(1));
+    let mut id = 1;
+    let mut table = Table::new();
+    table.add_row(row!["ID", "NAME", "IP", "MODEL"]);
+    for bulb in bulbs {
+        table.add_row(row![id.to_string(), bulb.name, bulb.ip, bulb.model]);
+        id += 1;
     }
+    table.printstd();
 }
 
 fn send_search_broadcast(socket: &UdpSocket) {
