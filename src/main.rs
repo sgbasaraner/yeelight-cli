@@ -41,8 +41,10 @@ fn main() {
     bulbs = remove_duplicates(bulbs);
     println!("{:?}", bulbs);
     let mut current_command_id: u32 = 0;
+    operate_on_bulb(&mut current_command_id, &bulbs[0], "toggle", "");
     for i in 0..10 {
         operate_on_bulb(&mut current_command_id, &bulbs[0], "set_bright", &(i * 10).to_string()[..]);
+        //operate_on_bulb(&mut current_command_id, &bulbs[0], "toggle", "");
         thread::sleep(time::Duration::from_secs(1));
     }
 }
