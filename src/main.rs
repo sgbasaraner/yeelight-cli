@@ -2,7 +2,6 @@ mod bulb;
 
 #[macro_use] extern crate prettytable;
 use prettytable::Table;
-use prettytable::row::Row;
 
 use std::str;
 use std::{thread, time};
@@ -10,6 +9,7 @@ use std::net::{TcpStream, UdpSocket};
 use std::sync::mpsc::{Sender, Receiver, channel, TryRecvError};
 use bulb::{Bulb, RGB};
 use std::io::Write;
+use std::io::{self, BufRead};
 
 const MULTICAST_ADDR: &'static str = "239.255.255.250:1982";
 
@@ -41,6 +41,16 @@ fn main() {
         }
     }
     bulbs = remove_duplicates(bulbs);
+    print_pretty_table(&bulbs);
+    print_usage_instructions();
+    print!("Command: ");
+    let mut line = String::new();
+    let stdin = io::stdin();
+    stdin.lock().read_line(&mut line).expect("Couldn't process the command.");
+    println!("{}", line);
+}
+
+fn print_pretty_table(bulbs: &Vec<Bulb>) {
     let mut id = 1;
     let mut table = Table::new();
     table.add_row(row!["ID", "NAME", "IP", "MODEL"]);
@@ -49,6 +59,13 @@ fn main() {
         id += 1;
     }
     table.printstd();
+}
+
+fn print_usage_instructions() {
+    println!("To operate on bulbs, try prompting:
+        bulb_id method param1 param2 param3 param4
+        For example, you can try:
+        1 set_power \"on\" \"smooth\" 500");
 }
 
 fn send_search_broadcast(socket: &UdpSocket) {
