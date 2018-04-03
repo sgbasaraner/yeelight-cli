@@ -187,6 +187,22 @@ fn get_next_cmd(cur: &mut u32) -> &u32 {
 }
 
 fn operate_on_bulb(cur: &mut u32, bulb: &Bulb, method: &str, params: &str) {
+    // Parse params
+    let mut parsed_params = String::new();
+    let params_split = params.split(" ");
+    for param in params_split {
+        match param.parse::<i32>(){
+            Ok(_) => parsed_params.push_str(param),
+            Err(_) => {
+                parsed_params.push_str("\"");
+                parsed_params.push_str(param);
+                parsed_params.push_str("\"");
+            }
+        };
+        parsed_params.push_str(", ");
+    }
+    let new_len = parsed_params.len() - 2;
+    parsed_params.truncate(new_len);
     let ip = &bulb.ip.to_owned()[..];
     let mut stream = TcpStream::connect(ip).expect("Couldn't start the stream.");
     let mut message = String::new();
