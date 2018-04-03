@@ -33,7 +33,7 @@ fn main() {
             thread::sleep(time::Duration::from_millis(200));
         }
     });
-    thread::sleep(time::Duration::from_secs(2));
+    thread::sleep(time::Duration::from_millis(1200));
     loop {
         match receiver.try_recv() {
             Ok(b) => bulbs.push(b),
