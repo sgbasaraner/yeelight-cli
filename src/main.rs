@@ -95,7 +95,8 @@ fn print_usage_instructions() {
         bulb_id method param1 param2 param3 param4
         For example, you can try:
         1 set_power \"on\" \"smooth\" 500
-        You can quit by typing quit.");
+        You can quit by typing quit.
+        For a list of all available methods, you can check out: http://www.yeelight.com/download/Yeelight_Inter-Operation_Spec.pdf");
 }
 
 fn send_search_broadcast(socket: &UdpSocket) {
@@ -203,6 +204,8 @@ fn operate_on_bulb(cur: &mut u32, bulb: &Bulb, method: &str, params: &str) {
     }
     let new_len = parsed_params.len() - 2;
     parsed_params.truncate(new_len);
+
+    // Send message to the bulb
     let ip = &bulb.ip.to_owned()[..];
     let mut stream = TcpStream::connect(ip).expect("Couldn't start the stream.");
     let mut message = String::new();
