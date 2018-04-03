@@ -4,6 +4,7 @@ mod bulb;
 use prettytable::Table;
 
 use std::str;
+use std::process::exit;
 use std::{thread, time};
 use std::net::{TcpStream, UdpSocket};
 use std::sync::mpsc::{Sender, Receiver, channel, TryRecvError};
@@ -14,6 +15,7 @@ use std::io::{self, BufRead};
 const MULTICAST_ADDR: &'static str = "239.255.255.250:1982";
 
 fn main() {
+    // Search for bulbs on a separate thread
     let socket = create_socket();
     send_search_broadcast(&socket);
     let mut bulbs: Vec<Bulb> = Vec::new();
@@ -33,12 +35,21 @@ fn main() {
             thread::sleep(time::Duration::from_millis(200));
         }
     });
+
+    // Give the other thread some time to find the bulbs
     thread::sleep(time::Duration::from_millis(1200));
+
+    // Transfer the found bulbs to this thread
     loop {
         match receiver.try_recv() {
             Ok(b) => bulbs.push(b),
             Err(TryRecvError::Empty) | Err(TryRecvError::Disconnected) => break,
         }
+    }
+
+    if bulbs.len() == 0 {
+        println!("No bulbs found.");
+        exit(1);
     }
     bulbs = remove_duplicates(bulbs);
     print_pretty_table(&bulbs);
