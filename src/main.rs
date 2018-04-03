@@ -9,8 +9,7 @@ use std::{thread, time};
 use std::net::{TcpStream, UdpSocket};
 use std::sync::mpsc::{Sender, Receiver, channel, TryRecvError};
 use bulb::{Bulb, RGB};
-use std::io::Write;
-use std::io::{self, BufRead};
+use std::io::{self, Write, BufRead};
 
 const MULTICAST_ADDR: &'static str = "239.255.255.250:1982";
 
