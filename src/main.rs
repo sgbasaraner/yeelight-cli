@@ -61,6 +61,10 @@ fn main() {
         let mut prompt = String::new();
         stdin.lock().read_line(&mut prompt).expect("Couldn't process the command.");
         if prompt.contains("quit") { break; }
+        if prompt.contains("print") {
+            print_bulb_details(&bulbs);
+            continue;
+        }
         let mut current_operation_id = 0;
         let space_split = prompt.split(" ").collect::<Vec<&str>>();
         let bulb_index: usize = space_split[0].parse::<usize>().unwrap() - 1;
@@ -113,6 +117,17 @@ fn print_pretty_table(bulbs: &Vec<Bulb>) {
     table.printstd();
 }
 
+fn print_bulb_details(bulbs: &Vec<Bulb>) {
+    println!("Warning: Bulb details may be outdated."); // TODO: fix this
+    let mut table = Table::new();
+    // This also does not print support variable
+    table.add_row(row!["UNIQUE ID", "MODEL", "FW VER", "POWER", "BRIGHT", "COLOR MODE", "CT", "RGB", "HUE", "SAT", "NAME", "IP"]);
+    for b in bulbs {
+        table.add_row(row![b.id, b.model, b.fw_ver, b.power, b.bright, b.color_mode, b.ct, b.rgb, b.hue, b.sat, b.name, b.ip]);
+    }
+    table.printstd();
+}
+
 fn print_usage_instructions() {
     println!(
         "To operate on bulbs, try prompting without using double quotes:
@@ -120,6 +135,7 @@ fn print_usage_instructions() {
         For example, you can try:
         1 set_power on smooth 500
         You can quit by typing quit.
+        You can print bulb details by typing print.
         For a list of all available methods, you can check out: http://www.yeelight.com/download/Yeelight_Inter-Operation_Spec.pdf");
 }
 
@@ -130,7 +146,7 @@ fn send_search_broadcast(socket: &UdpSocket) {
                     MAN: \"ssdp:discover\"\r\n
                     ST: wifi_bulb".as_bytes();
 
-    socket.send_to(message, MULTICAST_ADDR).expect("couldn't send to socket");
+    socket.send_to(message, MULTICAST_ADDR).expect("Couldn't send to socket");
 }
 
 fn process_search_response(response: &str) -> Bulb {
