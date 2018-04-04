@@ -65,22 +65,40 @@ fn main() {
             print_bulb_details(&bulbs);
             continue;
         }
-        let mut current_operation_id = 0;
         let space_split = prompt.split(" ").collect::<Vec<&str>>();
-        let bulb_index: usize = space_split[0].parse::<usize>().unwrap() - 1;
-        let mut params = String::new();
-        let mut tmp = 0;
-        for arg in &space_split {
-            if tmp < 2 { 
-                tmp += 1;
-                continue; 
-            }
-            params.push_str(&arg);
-            params.push_str(" ");
+        if space_split.len() < 2 {
+            println!("Invalid command.");
+            continue;
         }
-        let new_len = params.len() - 2;
-        params.truncate(new_len); // get rid of trailing whitespace
-        params = parse_params(&params);
+        let mut current_operation_id = 0;
+        let bulb_index: usize = match space_split[0].parse::<usize>() {
+            Ok(r) => {
+                if r > bulbs.len() || r == 0 {
+                    println!("Invalid command.");
+                    continue;
+                }
+                r - 1
+            },
+            Err(_) => {
+                println!("Invalid command.");
+                continue;
+            }
+        };
+        let mut params = String::new();
+        if space_split.len() > 2 {
+            let mut tmp = 0;
+            for arg in &space_split {
+                if tmp < 2 { 
+                    tmp += 1;
+                    continue; 
+                }
+                params.push_str(&arg);
+                params.push_str(" ");
+            }
+            let new_len = params.len() - 2;
+            params.truncate(new_len); // get rid of trailing whitespace
+            params = parse_params(&params);
+        }
         operate_on_bulb(&mut current_operation_id, &bulbs[bulb_index], &space_split[1], &params);
     }
 }
