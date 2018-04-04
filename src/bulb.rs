@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Debug, Clone)]
 pub struct Bulb {
     pub id: String,
@@ -20,4 +22,10 @@ pub struct RGB {
     pub r: u8,
     pub g: u8,
     pub b: u8
+}
+
+impl fmt::Display for RGB {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}, {}, {}", self.r, self.g, self.b)
+    }
 }
