@@ -1,5 +1,5 @@
 # yeelight-cli
-
+    cargo install yee
 This is a cross-platform command line client for Xiaomi's Yeelight. It is a very low-level implementation, and I believe it is possible to build somehing on top of this, maybe even a GUI. This still needs a lot of work to be full-featured, however, I believe it is usable at this stage.
 #
 You can use any method in [Yeelight Specification](http://www.yeelight.com/download/Yeelight_Inter-Operation_Spec.pdf) as long as your device supports it, as this program is essentially a wrapper around it. 
