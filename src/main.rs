@@ -7,11 +7,11 @@ use std::str;
 use std::process::exit;
 use std::{thread, time};
 use std::net::{TcpStream, UdpSocket};
-use std::sync::mpsc::{Sender, Receiver, channel, TryRecvError};
+use std::sync::mpsc::{Sender, Receiver, channel};
 use bulb::{Bulb, RGB};
 use std::io::{self, Write, BufRead, Read};
 
-const MULTICAST_ADDR: &'static str = "239.255.255.250:1982";
+const MULTICAST_ADDR: &str = "239.255.255.250:1982";
 
 fn main() {
     // Search for bulbs on a separate thread
@@ -39,14 +39,9 @@ fn main() {
     thread::sleep(time::Duration::from_millis(1200));
 
     // Transfer the found bulbs to this thread
-    loop {
-        match receiver.try_recv() {
-            Ok(b) => bulbs.push(b),
-            Err(TryRecvError::Empty) | Err(TryRecvError::Disconnected) => break,
-        }
-    }
+    bulbs.extend(receiver.try_iter());
 
-    if bulbs.len() == 0 {
+    if bulbs.is_empty() {
         println!("No bulbs found.");
         exit(1);
     }
@@ -65,7 +60,7 @@ fn main() {
             print_bulb_details(&bulbs);
             continue;
         }
-        let space_split = prompt.split(" ").collect::<Vec<&str>>();
+        let space_split = prompt.split(' ').collect::<Vec<&str>>();
         if space_split.len() < 2 {
             println!("Invalid command.");
             continue;
@@ -86,30 +81,26 @@ fn main() {
         };
         let mut params = String::new();
         if space_split.len() > 2 {
-            let mut tmp = 0;
-            for arg in &space_split {
-                if tmp < 2 { 
-                    tmp += 1;
-                    continue; 
-                }
-                params.push_str(&arg);
+            params.reserve(space_split.len() * 2); // at least 2 characters per arg
+            for arg in space_split.iter().skip(2) {
+                params.push_str(arg);
                 params.push_str(" ");
             }
             let new_len = params.len() - 2;
             params.truncate(new_len); // get rid of trailing whitespace
             params = parse_params(&params);
         }
-        operate_on_bulb(&mut current_operation_id, &bulbs[bulb_index], &space_split[1], &params);
+        operate_on_bulb(&mut current_operation_id, &bulbs[bulb_index], space_split[1], &params);
     }
 }
 
 fn parse_params(params: &str) -> String {
     // Parses params, allowing the user to input on instead of "on"
     let mut parsed_params = String::new();
-    let params_split = params.split(" ");
+    let params_split = params.split(' ');
     for param in params_split {
         // Check if param is an integer or not
-        match param.parse::<i32>(){
+        match param.parse::<i32>() {
             Ok(_) => parsed_params.push_str(param),
             Err(_) => {
                 parsed_params.push_str("\"");
@@ -124,7 +115,7 @@ fn parse_params(params: &str) -> String {
     parsed_params
 }
 
-fn print_pretty_table(bulbs: &Vec<Bulb>) {
+fn print_pretty_table(bulbs: &[Bulb]) {
     let mut id = 1;
     let mut table = Table::new();
     table.add_row(row!["ID", "NAME", "IP", "MODEL"]);
@@ -135,7 +126,7 @@ fn print_pretty_table(bulbs: &Vec<Bulb>) {
     table.printstd();
 }
 
-fn print_bulb_details(bulbs: &Vec<Bulb>) {
+fn print_bulb_details(bulbs: &[Bulb]) {
     println!("Warning: Bulb details may be outdated."); // TODO: fix this
     let mut table = Table::new();
     // This also does not print support variable
@@ -158,29 +149,27 @@ fn print_usage_instructions() {
 }
 
 fn send_search_broadcast(socket: &UdpSocket) {
-    let message = 
-                    "M-SEARCH * HTTP/1.1\r\n
+    let message = b"M-SEARCH * HTTP/1.1\r\n
                     HOST: 239.255.255.250:1982\r\n
                     MAN: \"ssdp:discover\"\r\n
-                    ST: wifi_bulb".as_bytes();
+                    ST: wifi_bulb";
 
     socket.send_to(message, MULTICAST_ADDR).expect("Couldn't send to socket");
 }
 
 fn process_search_response(response: &str) -> Bulb {
     let params = ["id", "model", "fw_ver", "support", "power", "bright", "color_mode", "ct", "rgb", "hue", "sat", "name"];
-    let mut values = Vec::new();
-    for i in 0..12 {
-        values.push(get_param_value(response, params[i]).unwrap());
-    }
-    let mut power = false;
-    if values[4] == "on" { power = true; }
+    let values = params
+        .iter()
+        .map(|p| get_param_value(response, p).unwrap())
+        .collect::<Vec<String>>();
+
     Bulb {
         id: values[0].clone(),
         model: values[1].clone(),
         fw_ver: values[2].parse::<u16>().unwrap(),
         support: values[3].clone(),
-        power: power,
+        power: values[4] == "on",
         bright: values[5].parse::<u8>().unwrap(),
         color_mode: values[6].parse::<u8>().unwrap(),
         ct: values[7].parse::<u16>().unwrap(),
@@ -194,28 +183,24 @@ fn process_search_response(response: &str) -> Bulb {
 
 fn create_socket() -> UdpSocket {
     match UdpSocket::bind("0.0.0.0:34254") {
-        Ok(s) => { return s },
+        Ok(s) => s,
         Err(e) => panic!("couldn't bind socket: {}", e)
-    };
+    }
 }
 
 fn get_ip(response: &str) -> Option<String> {
-    let split = response.split("\r\n");
-    for line in split {
-        if line.contains("Location") {
-            let vec = line.split("//").collect::<Vec<&str>>();
-            return Some(String::from(vec[1]));
-        }
-    }
-    return None;
+    response
+        .split("\r\n")
+        .find(|line| line.contains("Location"))
+        .map(|line| line.split("//").nth(1).unwrap().to_string())
 }
 
 fn get_param_value(response: &str, param: &str) -> Option<String> {
     let split = response.split("\r\n");
     for line in split {
-        let vec = line.split(": ").collect::<Vec<&str>>();
-        if vec[0].contains(param) {
-            return Some(String::from(vec[1]));
+        let mut line_split = line.split(": ");
+        if line_split.next().unwrap().contains(param) {
+            return Some(line_split.next().unwrap().to_string());
         }
     }
     return None;
@@ -277,4 +262,3 @@ fn operate_on_bulb(cur: &mut u32, bulb: &Bulb, method: &str, params: &str) {
             println!("Couldn't read from the stream.");
         }
     }
-}
