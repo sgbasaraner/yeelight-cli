@@ -9,7 +9,7 @@ use std::{thread, time};
 use std::net::{TcpStream, UdpSocket};
 use std::sync::mpsc::{Sender, Receiver, channel, TryRecvError};
 use bulb::{Bulb, RGB};
-use std::io::{self, Write, BufRead};
+use std::io::{self, Write, BufRead, Read};
 
 const MULTICAST_ADDR: &'static str = "239.255.255.250:1982";
 
@@ -83,7 +83,6 @@ fn main() {
 
 fn parse_params(params: &str) -> String {
     // Parses params, allowing the user to input on instead of "on"
-    println!("{}", params);
     let mut parsed_params = String::new();
     let params_split = params.split(" ");
     for param in params_split {
@@ -116,10 +115,10 @@ fn print_pretty_table(bulbs: &Vec<Bulb>) {
 
 fn print_usage_instructions() {
     println!(
-        "To operate on bulbs, try prompting:
+        "To operate on bulbs, try prompting without using double quotes:
         bulb_id method param1 param2 param3 param4
         For example, you can try:
-        1 set_power \"on\" \"smooth\" 500
+        1 set_power on smooth 500
         You can quit by typing quit.
         For a list of all available methods, you can check out: http://www.yeelight.com/download/Yeelight_Inter-Operation_Spec.pdf");
 }
@@ -224,6 +223,11 @@ fn operate_on_bulb(cur: &mut u32, bulb: &Bulb, method: &str, params: &str) {
     message.push_str("\",\"params\":[");
     message.push_str(params);
     message.push_str("]}\r\n");
-    println!("The message sent to the bulb is: {}", message);
+    print!("The message sent to the bulb is: {}", message);
+    io::stdout().flush().unwrap();
     stream.write(message.as_bytes()).expect("Couldn't send to the stream");
+    let mut buf = [0; 2048];
+    stream.read(&mut buf).unwrap();
+    print!("The bulb returns: {}", str::from_utf8(&buf).unwrap());
+    io::stdout().flush().unwrap();
 }
