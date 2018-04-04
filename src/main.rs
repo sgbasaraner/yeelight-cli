@@ -72,9 +72,35 @@ fn main() {
                 continue; 
             }
             params.push_str(&arg);
+            params.push_str(" ");
         }
+        let new_len = params.len() - 2;
+        params.truncate(new_len); // get rid of trailing whitespace
+        params = parse_params(&params);
         operate_on_bulb(&mut current_operation_id, &bulbs[bulb_index], &space_split[1], &params);
     }
+}
+
+fn parse_params(params: &str) -> String {
+    // Parses params, allowing the user to input on instead of "on"
+    println!("{}", params);
+    let mut parsed_params = String::new();
+    let params_split = params.split(" ");
+    for param in params_split {
+        // Check if param is an integer or not
+        match param.parse::<i32>(){
+            Ok(_) => parsed_params.push_str(param),
+            Err(_) => {
+                parsed_params.push_str("\"");
+                parsed_params.push_str(param);
+                parsed_params.push_str("\"");
+            }
+        };
+        parsed_params.push_str(", ");
+    }
+    let new_len = parsed_params.len() - 2; // get rid of the trailing ", "
+    parsed_params.truncate(new_len);
+    parsed_params
 }
 
 fn print_pretty_table(bulbs: &Vec<Bulb>) {
@@ -187,23 +213,6 @@ fn get_next_cmd(cur: &mut u32) -> &u32 {
 }
 
 fn operate_on_bulb(cur: &mut u32, bulb: &Bulb, method: &str, params: &str) {
-    // Parse params
-    let mut parsed_params = String::new();
-    let params_split = params.split(" ");
-    for param in params_split {
-        match param.parse::<i32>(){
-            Ok(_) => parsed_params.push_str(param),
-            Err(_) => {
-                parsed_params.push_str("\"");
-                parsed_params.push_str(param);
-                parsed_params.push_str("\"");
-            }
-        };
-        parsed_params.push_str(", ");
-    }
-    let new_len = parsed_params.len() - 2;
-    parsed_params.truncate(new_len);
-
     // Send message to the bulb
     let ip = &bulb.ip.to_owned()[..];
     let mut stream = TcpStream::connect(ip).expect("Couldn't start the stream.");
@@ -215,6 +224,6 @@ fn operate_on_bulb(cur: &mut u32, bulb: &Bulb, method: &str, params: &str) {
     message.push_str("\",\"params\":[");
     message.push_str(params);
     message.push_str("]}\r\n");
-    println!("{}", message);
+    println!("The message sent to the bulb is: {}", message);
     stream.write(message.as_bytes()).expect("Couldn't send to the stream");
 }
