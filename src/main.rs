@@ -223,11 +223,24 @@ fn operate_on_bulb(cur: &mut u32, bulb: &Bulb, method: &str, params: &str) {
     message.push_str("\",\"params\":[");
     message.push_str(params);
     message.push_str("]}\r\n");
-    print!("The message sent to the bulb is: {}", message);
-    io::stdout().flush().unwrap();
-    stream.write(message.as_bytes()).expect("Couldn't send to the stream");
+    match stream.write(message.as_bytes()) {
+        Ok(_) => {
+            print!("The message sent to the bulb is: {}", message);
+            io::stdout().flush().unwrap();
+        },
+        Err(_) => {
+            println!("Couldn't send to the stream");
+            return;
+        }
+    }
     let mut buf = [0; 2048];
-    stream.read(&mut buf).unwrap();
-    print!("The bulb returns: {}", str::from_utf8(&buf).unwrap());
-    io::stdout().flush().unwrap();
+    match stream.read(&mut buf) {
+        Ok(_) => {
+            print!("The bulb returns: {}", str::from_utf8(&buf).unwrap());
+            io::stdout().flush().unwrap();
+        },
+        Err(_) => {
+            println!("Couldn't read from the stream.");
+        }
+    }
 }
