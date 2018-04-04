@@ -262,3 +262,4 @@ fn operate_on_bulb(cur: &mut u32, bulb: &Bulb, method: &str, params: &str) {
             println!("Couldn't read from the stream.");
         }
     }
+}
