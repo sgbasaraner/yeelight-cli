@@ -49,6 +49,7 @@ fn main() {
     print_pretty_table(&bulbs);
     print_usage_instructions();
     // Main program loop
+    let mut current_operation_id = 0;
     loop {
         print!("Command: ");
         io::stdout().flush().unwrap();
@@ -65,7 +66,6 @@ fn main() {
             println!("Invalid command.");
             continue;
         }
-        let mut current_operation_id = 0;
         let bulb_index: usize = match space_split[0].parse::<usize>() {
             Ok(r) => {
                 if r > bulbs.len() || r == 0 {
@@ -90,7 +90,8 @@ fn main() {
             params.truncate(new_len); // get rid of trailing whitespace
             params = parse_params(&params);
         }
-        operate_on_bulb(&mut current_operation_id, &bulbs[bulb_index], space_split[1], &params);
+        operate_on_bulb(&current_operation_id, &bulbs[bulb_index], space_split[1], &params);
+        current_operation_id += 1;
     }
 }
 
@@ -225,18 +226,13 @@ fn remove_duplicates(bulbs: Vec<Bulb>) -> Vec<Bulb> {
     new
 }
 
-fn get_next_cmd(cur: &mut u32) -> &u32 {
-    *cur += 1;
-    cur
-}
-
-fn operate_on_bulb(cur: &mut u32, bulb: &Bulb, method: &str, params: &str) {
+fn operate_on_bulb(id: &u32, bulb: &Bulb, method: &str, params: &str) {
     // Send message to the bulb
     let ip = &bulb.ip.to_owned()[..];
     let mut stream = TcpStream::connect(ip).expect("Couldn't start the stream.");
     let mut message = String::new();
     message.push_str("{\"id\":");
-    message.push_str(&get_next_cmd(cur).to_string()[..]);
+    message.push_str(&id.to_string()[..]);
     message.push_str(",\"method\":\"");
     message.push_str(method);
     message.push_str("\",\"params\":[");
