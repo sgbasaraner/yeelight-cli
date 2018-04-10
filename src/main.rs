@@ -63,13 +63,13 @@ fn main() {
         }
         let space_split = prompt.split(' ').collect::<Vec<&str>>();
         if space_split.len() < 2 {
-            println!("Invalid command.");
+            println!("Please input at least 2 arguments.");
             continue;
         }
         let bulb_index: usize = match space_split[0].parse::<usize>() {
             Ok(r) => {
                 if r > bulbs.len() || r == 0 {
-                    println!("Invalid command.");
+                    println!("Invalid bulb id.");
                     continue;
                 }
                 r - 1
