@@ -66,7 +66,7 @@ fn main() {
             println!("Please input at least 2 arguments.");
             continue;
         }
-        let bulb_index: usize = match space_split[0].parse::<usize>() {
+        let bulb_index = match space_split[0].parse::<usize>() {
             Ok(r) => {
                 if r > bulbs.len() || r == 0 {
                     println!("Invalid bulb id.");
