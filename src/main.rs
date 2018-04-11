@@ -61,6 +61,8 @@ fn main() {
             print_bulb_details(&bulbs);
             continue;
         }
+		let new_len = prompt.len() - 1;
+		prompt.truncate(new_len); // get rid of trailing whitespace
         let space_split = prompt.split(' ').collect::<Vec<&str>>();
         if space_split.len() < 2 {
             println!("Please input at least 2 arguments.");
@@ -86,7 +88,7 @@ fn main() {
                 params.push_str(arg);
                 params.push_str(" ");
             }
-            let new_len = params.len() - 2;
+            let new_len = params.len() - 1;
             params.truncate(new_len); // get rid of trailing whitespace
             params = parse_params(&params);
         }
