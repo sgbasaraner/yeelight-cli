@@ -61,8 +61,7 @@ fn main() {
             print_bulb_details(&bulbs);
             continue;
         }
-		let new_len = prompt.len() - 1;
-		prompt.truncate(new_len); // get rid of trailing whitespace
+        prompt = prompt.chars().filter(|&c| !"\n\r\t".contains(c)).collect();
         let space_split = prompt.split(' ').collect::<Vec<&str>>();
         if space_split.len() < 2 {
             println!("Please input at least 2 arguments.");
