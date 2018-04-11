@@ -1,6 +1,6 @@
 [package]
 name = "yee"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Sarp Basaraner <sarpbasaraner@gmail.com>"]
 
 description = "A cross-platform, command line Yeelight client."
