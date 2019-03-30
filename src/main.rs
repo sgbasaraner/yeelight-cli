@@ -54,21 +54,20 @@ fn main() {
         let bulb_name = &args[1];
         let method_name = &args[2];
         for bulb in &bulbs {
-            if bulb.name == *bulb_name {
-                let mut params = String::new();
-                if args.len() > 3 {
-                    params.reserve(args.len() * 2); // at least 2 characters per arg
-                    for arg in args.iter().skip(3) {
-                        params.push_str(arg);
-                        params.push_str(" ");
-                    }
-                    let new_len = params.len() - 1;
-                    params.truncate(new_len); // get rid of trailing whitespace
-                    params = parse_params(&params);
+            if bulb.name != *bulb_name { continue; }
+            let mut params = String::new();
+            if args.len() > 3 {
+                params.reserve(args.len() * 2); // at least 2 characters per arg
+                for arg in args.iter().skip(3) {
+                    params.push_str(arg);
+                    params.push_str(" ");
                 }
-                operate_on_bulb(&0, &bulb, method_name, &params);
-                return;
+                let new_len = params.len() - 1;
+                params.truncate(new_len); // get rid of trailing whitespace
+                params = parse_params(&params);
             }
+            operate_on_bulb(&0, &bulb, method_name, &params);
+            return;
         }
     }
 
