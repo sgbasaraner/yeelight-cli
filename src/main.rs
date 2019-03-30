@@ -88,6 +88,7 @@ fn start_program_loop(bulbs: &[Bulb]) {
 }
 
 fn perform_command_line_ops(bulbs: &[Bulb]) -> bool {
+    // Returns true if an operation was performed
     let args: Vec<String> = env::args().collect();
     if args.len() <= 2 {
         return false
