@@ -20,14 +20,12 @@ fn main() {
     send_search_broadcast(&socket);
     let receiver = find_bulbs(socket);
     
-    let bulbs: Vec<Bulb> = receiver.try_iter().collect();
+    let bulbs: Vec<Bulb> = remove_duplicates(receiver.try_iter().collect());
 
     if bulbs.is_empty() {
         println!("No bulbs found.");
         exit(1);
     }
-
-    let bulbs = remove_duplicates(bulbs);
 
     // Deal with command line usage
     if perform_command_line_ops(&bulbs) {
