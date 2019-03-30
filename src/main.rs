@@ -26,34 +26,21 @@ fn main() {
         println!("No bulbs found.");
         exit(1);
     }
-    
+
     let bulbs = remove_duplicates(bulbs);
 
     // Deal with command line usage
-    let args: Vec<String> = env::args().collect();
-    if args.len() > 2 {
-        let bulb_name = &args[1];
-        let method_name = &args[2];
-        for bulb in &bulbs {
-            if bulb.name != *bulb_name { continue; }
-            let mut params = String::new();
-            if args.len() > 3 {
-                params.reserve(args.len() * 2); // at least 2 characters per arg
-                for arg in args.iter().skip(3) {
-                    params.push_str(arg);
-                    params.push_str(" ");
-                }
-                let new_len = params.len() - 1;
-                params.truncate(new_len); // get rid of trailing whitespace
-                params = parse_params(&params);
-            }
-            operate_on_bulb(&0, &bulb, method_name, &params);
-            return;
-        }
+    if perform_command_line_ops(&bulbs) {
+        return;
     }
 
     print_pretty_table(&bulbs);
     print_usage_instructions();
+
+    start_program_loop(&bulbs);
+}
+
+fn start_program_loop(bulbs: &[Bulb]) {
     // Main program loop
     let mut current_operation_id = 0;
     loop {
@@ -100,6 +87,32 @@ fn main() {
         operate_on_bulb(&current_operation_id, &bulbs[bulb_index], space_split[1], &params);
         current_operation_id += 1;
     }
+}
+
+fn perform_command_line_ops(bulbs: &[Bulb]) -> bool {
+    let args: Vec<String> = env::args().collect();
+    if args.len() <= 2 {
+        return false
+    }
+    let bulb_name = &args[1];
+    let method_name = &args[2];
+    for bulb in bulbs {
+        if bulb.name != *bulb_name { continue; }
+        let mut params = String::new();
+        if args.len() > 3 {
+            params.reserve(args.len() * 2); // at least 2 characters per arg
+            for arg in args.iter().skip(3) {
+                params.push_str(arg);
+                params.push_str(" ");
+            }
+            let new_len = params.len() - 1;
+            params.truncate(new_len); // get rid of trailing whitespace
+            params = parse_params(&params);
+        }
+        operate_on_bulb(&0, &bulb, method_name, &params);
+        return true;
+    }
+    return false
 }
 
 fn find_bulbs(socket: UdpSocket) -> Receiver<Bulb> {
