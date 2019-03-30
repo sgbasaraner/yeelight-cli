@@ -216,18 +216,25 @@ fn remove_duplicates(bulbs: Vec<Bulb>) -> Vec<Bulb> {
     new
 }
 
+fn create_message(id: &u32, method: &str, params: &str) -> String {
+    let strs = [
+        "{\"id\":",
+        &id.to_string()[..],
+        ",\"method\":\"",
+        method,
+        "\",\"params\":[",
+        params,
+        "]}\r\n"
+    ];
+    strs.join("")
+}
+
 fn operate_on_bulb(id: &u32, bulb: &Bulb, method: &str, params: &str) {
     // Send message to the bulb
+    let message = create_message(id, method, params);
+
     let ip = &bulb.ip.to_owned()[..];
     let mut stream = TcpStream::connect(ip).expect("Couldn't start the stream.");
-    let mut message = String::new();
-    message.push_str("{\"id\":");
-    message.push_str(&id.to_string()[..]);
-    message.push_str(",\"method\":\"");
-    message.push_str(method);
-    message.push_str("\",\"params\":[");
-    message.push_str(params);
-    message.push_str("]}\r\n");
     match stream.write(message.as_bytes()) {
         Ok(_) => {
             print!("The message sent to the bulb is: {}", message);
