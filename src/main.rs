@@ -9,7 +9,7 @@ use std::process::exit;
 use std::{thread, time};
 use std::net::{TcpStream, UdpSocket};
 use std::sync::mpsc::{Sender, Receiver, channel};
-use bulb::{Bulb, RGB};
+use bulb::Bulb;
 use std::io::{self, Write, BufRead, Read};
 
 const MULTICAST_ADDR: &str = "239.255.255.250:1982";
@@ -122,7 +122,7 @@ fn find_bulbs(socket: UdpSocket) -> Receiver<Bulb> {
         loop {
             match socket.recv_from(&mut buf) {
                 Ok(_) => {
-                    let _ = sender.send(process_search_response(str::from_utf8(&buf).unwrap()));
+                    let _ = sender.send(Bulb::new(str::from_utf8(&buf).unwrap()));
                 },
                 Err(e) => {
                     println!("Couldn't receive a datagram: {}", e);
@@ -200,60 +200,10 @@ fn send_search_broadcast(socket: &UdpSocket) {
     socket.send_to(message, MULTICAST_ADDR).expect("Couldn't send to socket");
 }
 
-fn process_search_response(response: &str) -> Bulb {
-    let params = ["id", "model", "fw_ver", "support", "power", "bright", "color_mode", "ct", "rgb", "hue", "sat", "name"];
-    let values = params
-        .iter()
-        .map(|p| get_param_value(response, p).unwrap())
-        .collect::<Vec<String>>();
-
-    Bulb {
-        id: values[0].clone(),
-        model: values[1].clone(),
-        fw_ver: values[2].parse::<u16>().unwrap(),
-        support: values[3].clone(),
-        power: values[4] == "on",
-        bright: values[5].parse::<u8>().unwrap(),
-        color_mode: values[6].parse::<u8>().unwrap(),
-        ct: values[7].parse::<u16>().unwrap(),
-        rgb: parse_rgb(values[8].parse::<u32>().unwrap()),
-        hue: values[9].parse::<u16>().unwrap(),
-        sat: values[10].parse::<u8>().unwrap(),
-        name: values[11].clone(),
-        ip: get_ip(response).unwrap()
-    }
-}
-
 fn create_socket() -> UdpSocket {
     match UdpSocket::bind("0.0.0.0:34254") {
         Ok(s) => s,
         Err(e) => panic!("couldn't bind socket: {}", e)
-    }
-}
-
-fn get_ip(response: &str) -> Option<String> {
-    response
-        .split("\r\n")
-        .find(|line| line.contains("Location"))
-        .map(|line| line.split("//").nth(1).unwrap().to_string())
-}
-
-fn get_param_value(response: &str, param: &str) -> Option<String> {
-    let split = response.split("\r\n");
-    for line in split {
-        let mut line_split = line.split(": ");
-        if line_split.next().unwrap().contains(param) {
-            return Some(line_split.next().unwrap().to_string());
-        }
-    }
-    return None;
-}
-
-fn parse_rgb(int: u32) -> RGB {
-    RGB {
-        r: ((int >> 16) & 0xFF) as u8,
-        g: ((int >> 8) & 0xFF) as u8,
-        b: ((int >> 0) & 0xFF) as u8
     }
 }
 
