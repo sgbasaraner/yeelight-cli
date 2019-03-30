@@ -18,35 +18,16 @@ fn main() {
     // Search for bulbs on a separate thread
     let socket = create_socket();
     send_search_broadcast(&socket);
-    let mut bulbs: Vec<Bulb> = Vec::new();
-    let (sender, receiver): (Sender<Bulb>, Receiver<Bulb>) = channel();
-    thread::spawn(move || {
-        let mut buf = [0; 2048];
-        loop {
-            match socket.recv_from(&mut buf) {
-                Ok(_) => {
-                    let _ = sender.send(process_search_response(str::from_utf8(&buf).unwrap()));
-                },
-                Err(e) => {
-                    println!("Couldn't receive a datagram: {}", e);
-                    break;
-                }
-            }
-            thread::sleep(time::Duration::from_millis(200));
-        }
-    });
-
-    // Give the other thread some time to find the bulbs
-    thread::sleep(time::Duration::from_millis(1200));
-
-    // Transfer the found bulbs to this thread
-    bulbs.extend(receiver.try_iter());
+    let receiver = find_bulbs(socket);
+    
+    let bulbs: Vec<Bulb> = receiver.try_iter().collect();
 
     if bulbs.is_empty() {
         println!("No bulbs found.");
         exit(1);
     }
-    bulbs = remove_duplicates(bulbs);
+    
+    let bulbs = remove_duplicates(bulbs);
 
     // Deal with command line usage
     let args: Vec<String> = env::args().collect();
@@ -119,6 +100,28 @@ fn main() {
         operate_on_bulb(&current_operation_id, &bulbs[bulb_index], space_split[1], &params);
         current_operation_id += 1;
     }
+}
+
+fn find_bulbs(socket: UdpSocket) -> Receiver<Bulb> {
+    let (sender, receiver): (Sender<Bulb>, Receiver<Bulb>) = channel();
+    thread::spawn(move || {
+        let mut buf = [0; 2048];
+        loop {
+            match socket.recv_from(&mut buf) {
+                Ok(_) => {
+                    let _ = sender.send(process_search_response(str::from_utf8(&buf).unwrap()));
+                },
+                Err(e) => {
+                    println!("Couldn't receive a datagram: {}", e);
+                    break;
+                }
+            }
+            thread::sleep(time::Duration::from_millis(200));
+        }
+    });
+    // Give the other thread some time to find the bulbs
+    thread::sleep(time::Duration::from_millis(1200));
+    receiver
 }
 
 fn parse_params(params: &str) -> String {
