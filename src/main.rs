@@ -1,4 +1,5 @@
 mod bulb;
+mod safebulb;
 
 #[macro_use] extern crate prettytable;
 use prettytable::Table;
