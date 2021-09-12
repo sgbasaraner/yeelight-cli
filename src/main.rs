@@ -1,16 +1,17 @@
 mod bulb;
 
-#[macro_use] extern crate prettytable;
+#[macro_use]
+extern crate prettytable;
+use bulb::Bulb;
 use prettytable::Table;
 
-use std::str;
 use std::env;
-use std::process::exit;
-use std::{thread, time};
+use std::io::{self, BufRead, Read, Write};
 use std::net::{TcpStream, UdpSocket};
-use std::sync::mpsc::{Sender, Receiver, channel};
-use bulb::Bulb;
-use std::io::{self, Write, BufRead, Read};
+use std::process::exit;
+use std::str;
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::{thread, time};
 
 const MULTICAST_ADDR: &str = "239.255.255.250:1982";
 
@@ -19,7 +20,7 @@ fn main() {
     let socket = create_socket();
     send_search_broadcast(&socket);
     let receiver = find_bulbs(socket);
-    
+
     let bulbs: Vec<Bulb> = remove_duplicates(receiver.try_iter().collect());
 
     if bulbs.is_empty() {
@@ -46,8 +47,13 @@ fn start_program_loop(bulbs: &[Bulb]) {
         io::stdout().flush().unwrap();
         let stdin = io::stdin();
         let mut prompt = String::new();
-        stdin.lock().read_line(&mut prompt).expect("Couldn't process the command.");
-        if prompt.contains("quit") { break; }
+        stdin
+            .lock()
+            .read_line(&mut prompt)
+            .expect("Couldn't process the command.");
+        if prompt.contains("quit") {
+            break;
+        }
         if prompt.contains("print") {
             print_bulb_details(&bulbs);
             continue;
@@ -65,7 +71,7 @@ fn start_program_loop(bulbs: &[Bulb]) {
                     continue;
                 }
                 r - 1
-            },
+            }
             Err(_) => {
                 println!("Invalid command.");
                 continue;
@@ -82,7 +88,12 @@ fn start_program_loop(bulbs: &[Bulb]) {
             params.truncate(new_len); // get rid of trailing whitespace
             params = parse_params(&params);
         }
-        operate_on_bulb(&current_operation_id, &bulbs[bulb_index], space_split[1], &params);
+        operate_on_bulb(
+            &current_operation_id,
+            &bulbs[bulb_index],
+            space_split[1],
+            &params,
+        );
         current_operation_id += 1;
     }
 }
@@ -91,12 +102,14 @@ fn perform_command_line_ops(bulbs: &[Bulb]) -> bool {
     // Returns true if an operation was performed
     let args: Vec<String> = env::args().collect();
     if args.len() <= 2 {
-        return false
+        return false;
     }
     let bulb_name = &args[1];
     let method_name = &args[2];
     for bulb in bulbs {
-        if bulb.name != *bulb_name { continue; }
+        if bulb.name != *bulb_name {
+            continue;
+        }
         let mut params = String::new();
         if args.len() > 3 {
             params.reserve(args.len() * 2); // at least 2 characters per arg
@@ -111,7 +124,7 @@ fn perform_command_line_ops(bulbs: &[Bulb]) -> bool {
         operate_on_bulb(&0, &bulb, method_name, &params);
         return true;
     }
-    return false
+    return false;
 }
 
 fn find_bulbs(socket: UdpSocket) -> Receiver<Bulb> {
@@ -121,8 +134,8 @@ fn find_bulbs(socket: UdpSocket) -> Receiver<Bulb> {
         loop {
             match socket.recv_from(&mut buf) {
                 Ok(_) => {
-                    let _ = sender.send(Bulb::new(str::from_utf8(&buf).unwrap()));
-                },
+                    let _ = sender.send(Bulb::parse(str::from_utf8(&buf).unwrap()).unwrap());
+                }
                 Err(e) => {
                     println!("Couldn't receive a datagram: {}", e);
                     break;
@@ -162,7 +175,7 @@ fn print_pretty_table(bulbs: &[Bulb]) {
     let mut table = Table::new();
     table.add_row(row!["ID", "NAME", "IP", "MODEL"]);
     for bulb in bulbs {
-        table.add_row(row![id.to_string(), bulb.name, bulb.ip, bulb.model]);
+        table.add_row(row![id.to_string(), bulb.name, bulb.ip_address, bulb.model]);
         id += 1;
     }
     table.printstd();
@@ -172,9 +185,27 @@ fn print_bulb_details(bulbs: &[Bulb]) {
     println!("Warning: Bulb details may be outdated."); // TODO: fix this
     let mut table = Table::new();
     // This also does not print support variable
-    table.add_row(row!["UNIQUE ID", "MODEL", "FW VER", "POWER", "BRIGHT", "COLOR MODE", "CT", "RGB", "HUE", "SAT", "NAME", "IP"]);
+    table.add_row(row![
+        "UNIQUE ID",
+        "MODEL",
+        "FW VER",
+        "POWER",
+        "BRIGHT",
+        "COLOR MODE",
+        "NAME",
+        "IP"
+    ]);
     for b in bulbs {
-        table.add_row(row![b.id, b.model, b.fw_ver, b.power, b.bright, b.color_mode, b.ct, b.rgb, b.hue, b.sat, b.name, b.ip]);
+        table.add_row(row![
+            b.id,
+            b.model,
+            b.fw_ver,
+            b.power,
+            b.bright,
+            b.color_mode,
+            b.name,
+            b.ip_address
+        ]);
     }
     table.printstd();
 }
@@ -196,13 +227,15 @@ fn send_search_broadcast(socket: &UdpSocket) {
                     MAN: \"ssdp:discover\"\r\n
                     ST: wifi_bulb";
 
-    socket.send_to(message, MULTICAST_ADDR).expect("Couldn't send to socket");
+    socket
+        .send_to(message, MULTICAST_ADDR)
+        .expect("Couldn't send to socket");
 }
 
 fn create_socket() -> UdpSocket {
     match UdpSocket::bind("0.0.0.0:34254") {
         Ok(s) => s,
-        Err(e) => panic!("couldn't bind socket: {}", e)
+        Err(e) => panic!("couldn't bind socket: {}", e),
     }
 }
 
@@ -210,7 +243,9 @@ fn remove_duplicates(bulbs: Vec<Bulb>) -> Vec<Bulb> {
     let mut new = Vec::new();
     let mut ids = Vec::new();
     for bulb in bulbs {
-        if ids.contains(&bulb.id) { continue }
+        if ids.contains(&bulb.id) {
+            continue;
+        }
         ids.push(bulb.id.clone());
         new.push(bulb);
     }
@@ -225,7 +260,7 @@ fn create_message(id: &u32, method: &str, params: &str) -> String {
         method,
         "\",\"params\":[",
         params,
-        "]}\r\n"
+        "]}\r\n",
     ];
     strs.join("")
 }
@@ -234,13 +269,13 @@ fn operate_on_bulb(id: &u32, bulb: &Bulb, method: &str, params: &str) {
     // Send message to the bulb
     let message = create_message(id, method, params);
 
-    let ip = &bulb.ip.to_owned()[..];
+    let ip = &bulb.ip_address.to_owned()[..];
     let mut stream = TcpStream::connect(ip).expect("Couldn't start the stream.");
     match stream.write(message.as_bytes()) {
         Ok(_) => {
             print!("The message sent to the bulb is: {}", message);
             io::stdout().flush().unwrap();
-        },
+        }
         Err(_) => {
             println!("Couldn't send to the stream");
             return;
@@ -251,7 +286,7 @@ fn operate_on_bulb(id: &u32, bulb: &Bulb, method: &str, params: &str) {
         Ok(_) => {
             print!("The bulb returns: {}", str::from_utf8(&buf).unwrap());
             io::stdout().flush().unwrap();
-        },
+        }
         Err(_) => {
             println!("Couldn't read from the stream.");
         }
