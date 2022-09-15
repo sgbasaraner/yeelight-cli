@@ -9,4 +9,4 @@ keywords = ["yeelight", "cli"]
 license = "MIT"
 
 [dependencies]
-prettytable-rs = "^0.6"
+prettytable-rs = "^0.9"
