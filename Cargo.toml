@@ -1,6 +1,6 @@
 [package]
 name = "yee"
-version = "0.2.1"
+version = "0.2.2"
 authors = ["Sarp Basaraner <sarpbasaraner@gmail.com>"]
 
 description = "A cross-platform, command line Yeelight client."
@@ -9,4 +9,4 @@ keywords = ["yeelight", "cli"]
 license = "MIT"
 
 [dependencies]
-prettytable-rs = "^0.6"
+prettytable-rs = "^0.9"
