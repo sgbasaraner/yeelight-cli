@@ -41,49 +41,37 @@ fn main() {
 fn start_program_loop(bulbs: &[Bulb]) {
     // Main program loop
     let mut current_operation_id = 0;
-    loop {
-        print!("Command: ");
-        io::stdout().flush().unwrap();
-        let stdin = io::stdin();
-        let mut prompt = String::new();
-        stdin.lock().read_line(&mut prompt).expect("Couldn't process the command.");
-        if prompt.contains("quit") { break; }
-        if prompt.contains("print") {
-            print_bulb_details(&bulbs);
-            continue;
-        }
-        prompt = prompt.chars().filter(|&c| !"\n\r\t".contains(c)).collect();
-        let space_split = prompt.split(' ').collect::<Vec<&str>>();
-        if space_split.len() < 2 {
-            println!("Please input at least 2 arguments.");
-            continue;
-        }
-        let bulb_index = match space_split[0].parse::<usize>() {
-            Ok(r) => {
-                if r > bulbs.len() || r == 0 {
-                    println!("Invalid bulb id.");
-                    continue;
-                }
-                r - 1
+    print!("Command: ");
+    io::stdout().flush().unwrap();
+
+    for prompt in io::stdin().lock().lines().map(Result::unwrap) {
+        let operation_result: Result<(), &str> = match prompt.trim() {
+            "quit" => break,
+            "print" => {
+                print_bulb_details(bulbs);
+                Ok(())
             },
-            Err(_) => {
-                println!("Invalid command.");
-                continue;
+            prompt => { 
+                let prompt_components = prompt.split(' ').collect::<Vec<&str>>();
+                match prompt_components.as_slice() {
+                    [bulb_index, method, params @ ..] => match bulb_index.parse::<usize>() {
+                        Ok(r) if 1 <= r && r <= bulbs.len() => {
+                            operate_on_bulb(&current_operation_id, &bulbs[r - 1], method, &parse_params(&params.join(" ")));
+                            current_operation_id += 1;
+                            Ok(())
+                        },
+                        _ => Err("Invalid command or bulb id.")
+                    },
+                    _ => Err("Please input at least 2 arguments.")
+                }
             }
         };
-        let mut params = String::new();
-        if space_split.len() > 2 {
-            params.reserve(space_split.len() * 2); // at least 2 characters per arg
-            for arg in space_split.iter().skip(2) {
-                params.push_str(arg);
-                params.push_str(" ");
-            }
-            let new_len = params.len() - 1;
-            params.truncate(new_len); // get rid of trailing whitespace
-            params = parse_params(&params);
+
+        if let Err(msg) = operation_result {
+             println!("{}", msg);
         }
-        operate_on_bulb(&current_operation_id, &bulbs[bulb_index], space_split[1], &params);
-        current_operation_id += 1;
+        print!("Command: ");
+        io::stdout().flush().unwrap();
     }
 }
 
